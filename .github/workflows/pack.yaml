@@ -1,0 +1,25 @@
+name: Package
+on: push
+jobs:
+  pack-arch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+  pack-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: rundock
+        run: |
+            docker ps
+            docker images
+            docker run debian echo hello
+
+      - uses: docker://archlinux:latest
+        with:
+            args: echo hello
+
