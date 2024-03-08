@@ -9,13 +9,19 @@ It can be used on place of fakeroot in some places.
 Requirements:
 - libseccomp >= 2.5.0
 
-Debian
+### Debian
 
     apt-get install -yq python3-seccomp util-linux
     curl -o /usr/bin/sudo https://github.com/0ex/fake-sudo/raw/master/fake-sudo.py
     chmod +x /usr/bin/sudo
 
-Arch (out of date)
+### Arch
+
+    pacman -S python-libseccomp
+    curl -o /usr/bin/sudo https://github.com/0ex/fake-sudo/raw/master/fake-sudo.py
+    chmod +x /usr/bin/sudo
+
+To avoid sudo being overwritten (out of date):
 
     curl -L -o /root/fake-sudo.pkg https://github.com/0ex/fake-sudo/releases/download/v1/fake-sudo-1-1-x86_64.pkg.tar.xz
     pacman -U --noconfirm /root/fake-sudo.pkg

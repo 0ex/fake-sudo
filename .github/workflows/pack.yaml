@@ -7,6 +7,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - uses: docker://archlinux:latest
+        with:
+            args: echo hello
+
   pack-deb:
     runs-on: ubuntu-latest
     steps:
@@ -18,8 +22,4 @@ jobs:
             docker ps
             docker images
             docker run debian echo hello
-
-      - uses: docker://archlinux:latest
-        with:
-            args: echo hello
 

@@ -6,8 +6,10 @@ https://github.com/0ex/fake-sudo
 """
 
 import os, sys, re
+import signal
 from seccomp import SyscallFilter, Attr, NOTIFY, ALLOW, Arch, NotificationResponse
 from seccomp import resolve_syscall
+from threading import Thread
 
 def main():
     progname, *args = sys.argv[:]
@@ -63,33 +65,58 @@ SYSCALLS = [
     'fchown', 'fchown32', 'fchownat',
 ]
 
-def run(cmd):
-    """Run cmd (an argv-style list of strings)
-    """
+def handle_syscalls(f):
+    while alive:
+        notify = f.receive_notify()
+        syscall = resolve_syscall(Arch(), notify.syscall)
+        log(f'faking {syscall.decode()}({", ".join(str(a) for a in notify.syscall_args)}) pid={notify.pid}')
+        f.respond_notify(NotificationResponse(notify, val=0, error=0, flags=1))
 
+def log(msg):
+    print(f'sudo: {msg}', file=sys.stderr)
+    
+alive = True
+
+def handle_signal(sig, frame):
+    global alive
+
+    log(f'signal {sig}')
+
+    if sig == signal.SIGCHLD:
+        alive = False
+
+def run(cmd):
+
+    # setup filter
     f = SyscallFilter(ALLOW)
     f.set_attr(Attr.CTL_TSYNC, 1)
     for c in SYSCALLS:
         f.add_rule(NOTIFY, c)
     f.load()
+
+    # interrupt receive_notify when the child is dead
+    signal.signal(signal.SIGCHLD, handle_signal)
+    signal.siginterrupt(signal.SIGCHLD, True)
+    signal.pthread_sigmask(signal.SIG_UNBLOCK, {signal.SIGCHLD})
+    
+    # we could use this instead
+    # get_notify_fd()
+
     pid = os.fork()
     if pid == 0:
-        print('exec', cmd)
         os.execvp(cmd[0], cmd)
-        sys.exit(1)
-   
-    while True:
-        notify = f.receive_notify()
-        syscall = resolve_syscall(Arch(), notify.syscall)
-        print('call', syscall, notify.args)
-        f.respond_notify(NotificationResponse(notify, val=0, error=0, flags=1))
+    
+    log(f'waiting {pid}')
 
-    wpid, rc = os.waitpid(pid, 0)
-    if os.WIFEXITED(rc) == 0:
-        raise RuntimeError("Child process error")
-    if os.WEXITSTATUS(rc) != 0:
-        raise RuntimeError("Child process error")
-    sys.exxit(1)
+    try:
+        handle_syscalls(f)
+    except Exception as e:
+        if alive:
+            raise
+
+    _, rc = os.waitpid(pid, 0)
+    log(f'done {rc}')
+    sys.exit(os.WEXITSTATUS(rc))
 
 if __name__ == '__main__':
     main()
