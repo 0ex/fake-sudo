@@ -2,7 +2,7 @@
 
 fake-sudo uses user namespaces and seccomp system call filtering to pretend to be root.
 
-It can be used on place of fakeroot in some places.
+It can be used instead of fakeroot in some places.
 
 ## Install
 
